@@ -6,12 +6,19 @@ import com.trading.marketdataservice.repository.StockRepository;
 import com.trading.marketdataservice.service.MarketDataService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -20,12 +27,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MarketDataServiceImpl implements MarketDataService {
 
     private final StockRepository stockRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final Random random = new Random();
+    private final SimpMessagingTemplate messagingTemplate;
+    private final KafkaTemplate<String,Object> kafkaTemplate;
+
+    private static final String PRICE_UPDATED_TOPIC="stock:price.updated";
+    private static final String PRICE_KEY_PREFIX= "stock:price:";
 
 //     concurrentHashMap - for thread safety
     private final Map<String,StockPrice> stockPrices = new ConcurrentHashMap<>();
 
 //     initialize stock prices
-//    postconstruct -> runs when context is ready
+//    post construct -> runs when context is ready
 
     public void initializePrice(){
         log.info("Loading stock data ....");
@@ -56,18 +70,111 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
 
+//    scheduled price update - every 2 seconds
+    @Scheduled(fixedRateString = "${market.price-update-inverval}")
+    public void updatePrices(){
+
+        if(stockPrices.isEmpty()){
+            log.warn("No stocks loaded");
+            return;
+        }
+
+        stockPrices.forEach((symbol,currentPrice)->{
+            BigDecimal oldPrice = currentPrice.getPrice();
+
+//           +- 0.5 price movement
+            double priceMovement = (random.nextDouble() - 0.5) *0.5;
+
+            BigDecimal priceChange = oldPrice
+                    .multiply(BigDecimal.valueOf(priceMovement/100))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal newPrice = oldPrice.add(priceChange).setScale(2,RoundingMode.HALF_UP);
+
+//            Prevent negative price
+            if(newPrice.compareTo(BigDecimal.valueOf(1))<0){
+                newPrice = BigDecimal.valueOf(1);
+            }
+
+            BigDecimal changeAmount = newPrice
+                    .subtract(currentPrice.getOpen())
+                    .setScale(2,RoundingMode.HALF_UP);
+
+            BigDecimal changePercent = changeAmount
+                    .divide(currentPrice.getPrice(),4,RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2,RoundingMode.HALF_UP);
+
+//            update high/low
+
+            BigDecimal newHigh = newPrice
+                    .compareTo(currentPrice.getHigh()) >0
+                    ? newPrice
+                    : currentPrice.getHigh();
+
+            BigDecimal newLow = newPrice
+                    .compareTo(currentPrice.getLow()) <0
+                    ? newPrice
+                    : currentPrice.getLow();
+
+            currentPrice.setPrice(newPrice);
+            currentPrice.setChange(changeAmount);
+            currentPrice.setChangePercent(changePercent);
+            currentPrice.setHigh(newHigh);
+            currentPrice.setLow(newLow);
+            currentPrice.setTimestamp(LocalDateTime.now());
+
+//            cache in redis
+            redisTemplate
+                    .opsForValue()
+                    .set(PRICE_KEY_PREFIX + symbol, currentPrice);
+
+//            BroadCast via websocket -> all clients
+
+            messagingTemplate.convertAndSend(
+                    "/topic/prices" + symbol,currentPrice
+            );
+
+//            Publish to kafka
+            Map<String,Object> priceUpdatedEvent = new HashMap<>();
+            priceUpdatedEvent.put("symbol",symbol);
+            priceUpdatedEvent.put("price",newPrice);
+            priceUpdatedEvent.put("timestamp",LocalDateTime.now().toString());
+
+            kafkaTemplate.send(PRICE_UPDATED_TOPIC,symbol,priceUpdatedEvent);
+            log.debug("Prices updated for {} stocks",stockPrices.size());
+        });
+    }
+
+
     @Override
     public List<StockPrice> getAllPrices() {
-        return List.of();
+       return stockPrices
+               .values()
+               .stream()
+               .toList();
     }
 
     @Override
-    public StockPrice getPrice(String upperCase) {
-        return null;
+    public StockPrice getPrice(String symbol) {
+        Object cached = redisTemplate.opsForValue()
+                .get(PRICE_KEY_PREFIX + symbol);
+
+        if(cached !=null){
+            return (StockPrice) cached;
+        }
+
+        StockPrice price = stockPrices.get(symbol.toUpperCase());
+
+        if(price==null){
+            throw new RuntimeException("Stock not found: " + symbol);
+        }
+        return price;
     }
 
     @Override
     public List<Stock> getAllStocks() {
-        return List.of();
+
+        return stockRepository.findByActiveTrue();
     }
 }
