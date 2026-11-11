@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/user_db?createDatabaseIfNotExist=true
     username: root
-    password: root
+    password: 1234567890
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -13,15 +13,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-  Kafka:
+  kafka:
     bootstrap-servers: localhost:9092
     producer:
-      key-serializer: org.apache.common.serialization.StringSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-
 server:
-  port: 8881
+  port: 8081
 
 
 jwt:

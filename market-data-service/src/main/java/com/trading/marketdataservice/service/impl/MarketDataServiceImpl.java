@@ -71,7 +71,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
 
 //    scheduled price update - every 2 seconds
-    @Scheduled(fixedRateString = "${market.price-update-inverval}")
+    @Scheduled(fixedRateString = "${market.price-update-interval}")
     public void updatePrices(){
 
         if(stockPrices.isEmpty()){
