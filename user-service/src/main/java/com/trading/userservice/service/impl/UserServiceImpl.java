@@ -7,13 +7,20 @@ import com.trading.userservice.dto.UserResponse;
 import com.trading.userservice.entity.User;
 import com.trading.userservice.repository.UserRepository;
 import com.trading.userservice.service.UserService;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.security.Key;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +33,15 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final KafkaTemplate<String,Object> kafkaTemplate;
     private static final String USER_REGISTERED_TOPIC="user.registered";
+
+    @Value("${jwt.secret}")
+    private String secret;
+
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -167,11 +183,31 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    private String generateRefreshToken(String id) {
-        return "";
+    private String generateRefreshToken(String userId) {
+        return Jwts
+                .builder()
+                .claim("userId",userId)
+                .setSubject(userId)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
-    private String generateAccessToken(String id, String email) {
-        return "";
+    private Key getSignInKey() {
+
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private String generateAccessToken(String userId, String email) {
+        return Jwts
+                .builder()
+                .claim("userId",userId)
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 }
