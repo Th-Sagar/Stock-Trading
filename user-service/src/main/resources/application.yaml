@@ -25,9 +25,9 @@ server:
 
 
 jwt:
-  secret:
-  expiration:
-  refresh-expiration:
+  secret: 759328hdsajhsu3423849^(!&@(#!&(HXIhdshsiasdaifbda342942389438
+  expiration: 900000
+  refresh-expiration: 604800000
 
 
 management:
