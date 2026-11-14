@@ -6,6 +6,8 @@ import com.trading.marketdataservice.repository.StockRepository;
 import com.trading.marketdataservice.service.MarketDataService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -24,7 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class MarketDataServiceImpl implements MarketDataService {
+@Order(2)
+public class MarketDataServiceImpl implements MarketDataService, CommandLineRunner {
 
     private final StockRepository stockRepository;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -32,7 +35,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     private final SimpMessagingTemplate messagingTemplate;
     private final KafkaTemplate<String,Object> kafkaTemplate;
 
-    private static final String PRICE_UPDATED_TOPIC="stock:price.updated";
+    private static final String PRICE_UPDATED_TOPIC="stock.price.updated";
     private static final String PRICE_KEY_PREFIX= "stock:price:";
 
 //     concurrentHashMap - for thread safety
@@ -41,7 +44,9 @@ public class MarketDataServiceImpl implements MarketDataService {
 //     initialize stock prices
 //    post construct -> runs when context is ready
 
-    public void initializePrice(){
+
+    @Override
+    public void run(String... args) throws Exception{
         log.info("Loading stock data ....");
         List<Stock> stocks = stockRepository.findByActiveTrue();
         if(stocks.isEmpty()){
@@ -177,4 +182,6 @@ public class MarketDataServiceImpl implements MarketDataService {
 
         return stockRepository.findByActiveTrue();
     }
+
+
 }

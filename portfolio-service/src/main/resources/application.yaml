@@ -36,7 +36,7 @@ spring:
                 type: java.util.HashMap
 
 server:
-  port: 8884
+  port: 8084
 
 market:
   service:

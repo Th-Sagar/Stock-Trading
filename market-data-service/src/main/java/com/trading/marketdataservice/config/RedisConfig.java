@@ -1,6 +1,7 @@
 package com.trading.marketdataservice.config;
 
 
+import com.trading.marketdataservice.dto.StockPrice;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -13,17 +14,18 @@ public class RedisConfig {
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory){
-        RedisTemplate<String,Object> template = new RedisTemplate<>();
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
+
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
 
-        template.setValueSerializer(
-                new JacksonJsonRedisSerializer<Object>(Object.class)
-        );
-        template.setHashValueSerializer(
-                new JacksonJsonRedisSerializer<>(Object.class)
-        );
+
+        JacksonJsonRedisSerializer<StockPrice> serializer =
+                new JacksonJsonRedisSerializer<>(StockPrice.class);
+
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
         return template;
     }
 }
