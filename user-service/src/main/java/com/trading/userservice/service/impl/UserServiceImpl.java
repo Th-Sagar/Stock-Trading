@@ -102,7 +102,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository
                 .findByEmail(request.getEmail())
                 .orElseThrow(()-> new RuntimeException("User not found with an email: " + request.getEmail()));
-        if(passwordEncoder.matches(request.getPassword() ,user.getPassword())){
+        if(!passwordEncoder.matches(request.getPassword() ,user.getPassword())){
             throw new RuntimeException("Invalid credentials");
         }
         log.info("Login successful: {}", request.getEmail());

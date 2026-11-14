@@ -1,10 +1,13 @@
 spring:
   application:
     name: portfolio-service
+  cloud:
+    discovery:
+      enabled: false
   datasource:
     url: jdbc:mysql://localhost:3306/portfolio_db?createDatabaseIfNotExist=true
     username: root
-    password: root
+    password: 1234567890
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -13,11 +16,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-  Kafka:
+  kafka:
     bootstrap-servers: localhost:9092
     consumer:
-      key-deserializer: org.apache.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       group-id: portfolio-service-group
       auto-offset-reset: earliest
       properties:
@@ -30,10 +33,10 @@ spring:
                 headers: false
             value:
               default:
-                type: java.utilHashMap
+                type: java.util.HashMap
 
 server:
-  port: 8884
+  port: 8084
 
 market:
   service:

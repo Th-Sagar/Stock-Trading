@@ -1,10 +1,13 @@
 spring:
   application:
     name: order-service
+  cloud:
+    discovery:
+      enabled: false
   datasource:
     url: jdbc:mysql://localhost:3306/order_db?createDatabaseIfNotExist=true
     username: root
-    password: root
+    password: 1234567890
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -13,11 +16,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-  Kafka:
+  kafka:
     bootstrap-servers: localhost:9092
     producer:
-      key-serializer: org.apache.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 server:
   port: 8083
