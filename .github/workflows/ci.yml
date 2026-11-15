@@ -4,9 +4,7 @@ on:
   push:
     branches: [main, master, prod]
   pull_request:
-  workflow_dispatch:   # adds a "Run workflow" button in the Actions tab
-
-# Cancel older runs of the same branch/PR when a new commit arrives
+  workflow_dispatch:
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -43,9 +41,6 @@ jobs:
           cache: maven
           cache-dependency-path: ${{ matrix.service }}/pom.xml
 
-      # Tests are skipped because the default @SpringBootTest tests need
-      # MySQL, Redis and Kafka, which are not running on the GitHub runner.
-      # To run tests later, replace this with: mvn -B -ntp verify
       - name: Compile and package
         run: mvn -B -ntp package -DskipTests
 
