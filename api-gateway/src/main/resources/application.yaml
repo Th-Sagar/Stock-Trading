@@ -6,6 +6,36 @@ spring:
       server:
         webflux:
           routes:
+#            swagger docs
+            - id: user-service-docs
+              uri: http://localhost:8081
+              predicates:
+                - Path=/user-service/v3/api-docs
+              filters:
+                - RewritePath=/user-service/(?<path>.*), /$\{path}
+
+            - id: market-data-service-docs
+              uri: http://localhost:8082
+              predicates:
+                - Path=/market-data-service/v3/api-docs
+              filters:
+                - RewritePath=/market-data-service/(?<path>.*), /$\{path}
+
+            - id: order-service-docs
+              uri: http://localhost:8083
+              predicates:
+                - Path=/order-service/v3/api-docs
+              filters:
+                - RewritePath=/order-service/(?<path>.*), /$\{path}
+
+            - id: portfolio-service-docs
+              uri: http://localhost:8084
+              predicates:
+                - Path=/portfolio-service/v3/api-docs
+              filters:
+                - RewritePath=/portfolio-service/(?<path>.*), /$\{path}
+
+
             # Public user interface
             - id: user-service-public
               uri: http://localhost:8081
@@ -61,3 +91,16 @@ management:
     web:
       exposure:
         include: health, info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: user-service
+        url: /user-service/v3/api-docs
+      - name: market-data-service
+        url: /market-data-service/v3/api-docs
+      - name: order-service
+        url: /order-service/v3/api-docs
+      - name: portfolio-service
+        url: /portfolio-service/v3/api-docs

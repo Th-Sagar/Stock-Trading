@@ -14,10 +14,25 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.security.Key;
+import java.util.List;
 
 @Slf4j
 @Component
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
+
+    private static final List<String> PUBLIC_PATHS = List.of(
+            "/api/v1/users/register",
+            "/api/v1/users/login",
+            "/v3/api-docs",
+            "/swagger-ui",
+            "/webjars",
+            "/actuator/health",
+            "/ws"
+    );
+
+    private boolean isPublicEndpoint(String path) {
+        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    }
 
     @Value("${jwt.secret}")
     private String secret;
@@ -92,15 +107,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     private Key getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-
-    private boolean isPublicEndpoint(String path) {
-
-        return path.contains("/register") ||
-                path.contains("/login") ||
-                path.contains("/health") ||
-                path.contains("/ws");
     }
 
     private Mono<Void> unAuthorizedResponse(ServerWebExchange exchange, String message) {
